@@ -8,7 +8,7 @@
  * for the sole purpose of studying while attending the course CO2018.
  */
 
-#ifdef MM_PAGING
+//#ifdef MM_PAGING
 /*
  * System Library
  * Memory Module Library libmem.c 
@@ -485,4 +485,4 @@ int get_free_vmrg_area(struct pcb_t *caller, int vmaid, int size, struct vm_rg_s
   return 0;
 }
 
-#endif
+//#endif

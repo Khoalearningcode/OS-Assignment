@@ -132,7 +132,7 @@ addr_t alloc_mem(uint32_t size, struct pcb_t * proc) {
 		 * 	  valid. */
 
 		 int page_num = 0;
-		 int prev_page;
+		 int prev_page = -2;
 		 for(int i = 0; i < NUM_PAGES; i++) {
 			if(_mem_stat[i].proc == 0) {
 				_mem_stat[i].proc = proc->pid;
@@ -140,7 +140,7 @@ addr_t alloc_mem(uint32_t size, struct pcb_t * proc) {
 				_mem_stat[i].index = page_num;
 				page_num++;
 
-				if(prev_page == NULL) {
+				if(prev_page == -2) {
 					prev_page = i;
 					continue;
 				}
