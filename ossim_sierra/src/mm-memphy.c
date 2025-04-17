@@ -15,7 +15,7 @@
  *  @offset: offset
  */
 int MEMPHY_mv_csr(struct memphy_struct *mp, int offset)
-{`  
+{
    int numstep = 0;
 
    mp->cursor = 0;
@@ -170,11 +170,11 @@ int MEMPHY_dump(struct memphy_struct *mp)
 
     BYTE value;
 
-    for (int i = 0; i < maxsz; i++) {
+    for (int i = 0; i < mp->maxsz; i++) {
         if (MEMPHY_read(mp, i, &value) == 0) {
             printf("%d: %c", i, value);
         }
-        else printf("%d: Error loading content");
+        else printf("%d: Error loading content", i);
     }
 
    return 0;

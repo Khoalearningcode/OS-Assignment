@@ -8,7 +8,7 @@
  * for the sole purpose of studying while attending the course CO2018.
  */
 
-// #ifdef MM_PAGING
+#ifdef MM_PAGING
 /*
  * System Library
  * Memory Module Library libmem.c 
@@ -72,7 +72,7 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, int size, int *alloc_addr
   struct vm_rg_struct rgnode;
 
   /* TODO: commit the vmaid */
-  // rgnode.vmaid
+  //rgnode.vmaid
 
   if (get_free_vmrg_area(caller, vmaid, size, &rgnode) == 0)
   {
@@ -89,30 +89,40 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, int size, int *alloc_addr
 
   /* TODO retrive current vma if needed, current comment out due to compiler redundant warning*/
   /*Attempt to increate limit to get space */
-  //struct vm_area_struct *cur_vma = get_vma_by_num(caller->mm, vmaid);
+  struct vm_area_struct *cur_vma = get_vma_by_num(caller->mm, vmaid);
 
-
-  //int inc_sz = PAGING_PAGE_ALIGNSZ(size);
-  //int inc_limit_ret;
+  int inc_sz = PAGING_PAGE_ALIGNSZ(size);
+  int inc_limit_ret;
 
   /* TODO retrive old_sbrk if needed, current comment out due to compiler redundant warning*/
-  //int old_sbrk = cur_vma->sbrk;
+  int old_sbrk = cur_vma->sbrk;
 
   /* TODO INCREASE THE LIMIT as inovking systemcall 
    * sys_memap with SYSMEM_INC_OP 
    */
-  //struct sc_regs regs;
-  //regs.a1 = ...
-  //regs.a2 = ...
-  //regs.a3 = ...
+  struct sc_regs regs;
+  regs.a1 = SYSMEM_INC_OP;
+  regs.a2 = vmaid;
+  regs.a3 = inc_sz;
   
   /* SYSCALL 17 sys_memmap */
 
+  inc_limit_ret = __sys_memmap(caller, &regs);
+
   /* TODO: commit the limit increment */
 
-  /* TODO: commit the allocation address 
-  // *alloc_addr = ...
-  */
+  cur_vma->vm_end += inc_sz;
+
+  /* TODO: commit the allocation address*/
+
+  get_free_vmrg_area(caller, vmaid, size, &rgnode);
+
+  caller->mm->symrgtbl[rgid].rg_start = rgnode.rg_start;
+  caller->mm->symrgtbl[rgid].rg_end = rgnode.rg_end;
+
+  *alloc_addr = rgnode.rg_start;
+
+  pthread_mutex_unlock(&mmvm_lock);
 
   return 0;
 
@@ -127,7 +137,9 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, int size, int *alloc_addr
  */
 int __free(struct pcb_t *caller, int vmaid, int rgid)
 {
-  //struct vm_rg_struct rgnode;
+  struct vm_rg_struct rgnode;
+
+  struct vm_area_struct *cur_vma = get_vma_by_num(caller->mm, vmaid);
 
   // Dummy initialization for avoding compiler dummay warning
   // in incompleted TODO code rgnode will overwrite through implementing
@@ -137,10 +149,17 @@ int __free(struct pcb_t *caller, int vmaid, int rgid)
     return -1;
 
   /* TODO: Manage the collect freed region to freerg_list */
-  
+
+  struct vm_rg_struct *currg = get_symrg_byid(caller->mm, rgid);
+  if(currg == NULL) {
+    printf("Invalid region ID\n");
+    return -1;
+  }
+
+  rgnode = *currg;
 
   /*enlist the obsoleted memory region */
-  //enlist_vm_freerg_list();
+  enlist_vm_freerg_list(caller->mm, &rgnode);
 
   return 0;
 }
@@ -466,4 +485,4 @@ int get_free_vmrg_area(struct pcb_t *caller, int vmaid, int size, struct vm_rg_s
   return 0;
 }
 
-//#endif
+#endif
