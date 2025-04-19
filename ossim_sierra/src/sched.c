@@ -52,9 +52,20 @@ void init_scheduler(void)
 struct pcb_t *get_mlq_proc(void)
 {
 	struct pcb_t *proc = NULL;
+	unsigned long prio;
 	/*TODO: get a process from PRIORITY [ready_queue].
 	 * Remember to use lock to protect the queue.
 	 * */
+	pthread_mutex_lock(&queue_lock);
+	for (prio = 0; prio < MAX_PRIO; prio++) 
+	{
+	        if (!empty(&mlq_ready_queue[prio]))
+	        {
+	                proc = dequeue(&mlq_ready_queue[prio]);
+	                break;
+	        }
+	}
+	pthread_mutex_unlock(&queue_lock);
 	return proc;
 }
 

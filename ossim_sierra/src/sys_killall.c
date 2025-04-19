@@ -36,6 +36,8 @@ int __sys_killall(struct pcb_t *caller, struct sc_regs* regs)
     /* TODO: Traverse proclist to terminate the proc
      *       stcmp to check the process match proc_name
      */
+     
+
     //caller->running_list
     //caller->mlq_ready_queu
 
@@ -43,6 +45,58 @@ int __sys_killall(struct pcb_t *caller, struct sc_regs* regs)
      *       all processes with given
      *        name in var proc_name
      */
+    struct queue_t *queue = caller->mlq_ready_queue;
+    struct queue_t temp_queue;
+    temp_queue.size = 0;
+    for (int i = 0; i < MAX_QUEUE_SIZE; i++) 
+    {
+        temp_queue.proc[i] = NULL;  
+    }
+    if (queue != NULL) 
+    {
+        struct pcb_t *proc;
+        while(!empty(queue))
+        {
+            proc = dequeue(queue);
+            if (strcmp(proc->path, proc_name) == 0) 
+            {
+                libfree(proc, memrg);
+            } 
+            else 
+            {
+                enqueue(&temp_queue, proc);
+            }
+        }
+    }
+    while (!empty(&temp_queue)) 
+    {
+        struct pcb_t *proc = dequeue(&temp_queue);
+        enqueue(queue, proc);
+    }
 
-    return 0; 
+    struct queue_t *rqueue = caller->running_list;
+    if (rqueue != NULL) 
+    {
+        struct pcb_t *proc;
+        while(!empty(rqueue))
+        {
+            proc = dequeue(rqueue);
+            if (strcmp(proc->path, proc_name) == 0) 
+            {
+                libfree(proc, memrg);
+            } 
+            else 
+            {
+                enqueue(&temp_queue, proc);
+            }
+        }
+    }
+    while (!empty(&temp_queue)) 
+    {
+        struct pcb_t *proc = dequeue(&temp_queue);
+        enqueue(rqueue, proc);
+    }
+
+    return 0;
+    
 }
