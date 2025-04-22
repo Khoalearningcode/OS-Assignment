@@ -88,13 +88,33 @@ int vmap_page_range(struct pcb_t *caller,           // process call
 {                                                   // no guarantee all given pages are mapped
   //struct framephy_struct *fpit;
   int pgit = 0;
-  int pgn = PAGING_PGN(addr);
+  int pgn_start = PAGING_PGN(addr);
+  struct framephy_struct *cur_frame = frames;
+  int pgn_end = pgn_start + pgnum;
 
   /* TODO: update the rg_end and rg_start of ret_rg 
   //ret_rg->rg_end =  ....
   //ret_rg->rg_start = ...
   //ret_rg->vmaid = ...
   */
+  for(int pgit = 0;pgit < pgnum;pgit++){
+    int pgn = pgn_start + pgit; 
+    uint32_t *pte = &caller->mm->pgd[pgn];
+
+    if(cur_frame == NULL){
+      return -1;
+    }
+
+    if(PAGING_PAGE_PRESENT(*pte)){
+      continue;
+    }
+
+    pte_set_fpn(pte, cur_frame->fpn);
+
+    enlist_pgn_node(&caller->mm->fifo_pgn, pgn);
+
+    cur_frame = cur_frame->fp_next;
+  }
 
   /* TODO map range of frame to address space
    *      [addr to addr + pgnum*PAGING_PAGESZ
@@ -103,7 +123,8 @@ int vmap_page_range(struct pcb_t *caller,           // process call
 
   /* Tracking for later page replacement activities (if needed)
    * Enqueue new usage page */
-  enlist_pgn_node(&caller->mm->fifo_pgn, pgn + pgit);
+
+  
 
   return 0;
 }
