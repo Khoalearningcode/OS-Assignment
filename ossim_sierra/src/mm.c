@@ -235,26 +235,58 @@ int __swap_cp_page(struct memphy_struct *mpsrc, int srcfpn,
  */
 int init_mm(struct mm_struct *mm, struct pcb_t *caller)
 {
+  caller->mm = mm;
+  // create VMA for heap segment
   struct vm_area_struct *vma0 = malloc(sizeof(struct vm_area_struct));
-
+  struct vm_area_struct *vma1 = malloc(sizeof(struct vm_area_struct));
+  if(!vma0) {
+    perror("Allocation failed for VMA0!");
+    return -1;
+  }
+  if(!vma1) {
+    perror("Allocation failed for VMA1!");
+    free(vma0);
+    return -1;
+  }
+  // allocation page with max size page
   mm->pgd = malloc(PAGING_MAX_PGN * sizeof(uint32_t));
-
-  /* By default the owner comes with at least one vma */
+  if (!mm->pgd) {
+      perror("Allocation failed for page directory");
+      free(vma0);
+      free(vma1);
+      return -1;
+  }
+  for (int i = 0; i < PAGING_MAX_PGN; i++) {
+      mm->pgd[i] = 0;
+  }
+  /* By default the owner comes with at least one vma for DATA */
   vma0->vm_id = 0;
   vma0->vm_start = 0;
   vma0->vm_end = vma0->vm_start;
+  //vma0->sbrk = vma0->vm_start;
   vma0->sbrk = vma0->vm_start;
-  struct vm_rg_struct *first_rg = init_vm_rg(vma0->vm_start, vma0->vm_end);
+  vma1->vm_freerg_list = NULL;
+  
+  struct vm_rg_struct *first_rg = init_vm_rg(vma0->vm_start, vma0->vm_end, 0);
   enlist_vm_rg_node(&vma0->vm_freerg_list, first_rg);
 
-  /* TODO update VMA0 next */
-  // vma0->next = ...
+  // set VMA1 for heap segment (from highest address)
+  vma1->vm_id = 1;
+  vma1->vm_start = vma0->vm_end;
+  vma1->vm_end = vma1->vm_start;
+  vma1->sbrk = vma1->vm_start;
+  vma1->vm_freerg_list = NULL;
 
-  /* Point vma owner backward */
-  vma0->vm_mm = mm; 
+  struct vm_rg_struct *heap_rg = init_vm_rg(vma1->vm_start, vma1->vm_end, 0);
+  enlist_vm_rg_node(&vma1->vm_freerg_list, heap_rg);
 
-  /* TODO: update mmap */
-  //mm->mmap = ...
+  vma0->vm_next = vma1;
+  vma1->vm_next = NULL;
+
+  vma0->vm_mm = mm;
+  vma1->vm_mm = mm;
+
+  mm->mmap = vma0;
 
   return 0;
 }
