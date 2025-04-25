@@ -163,7 +163,7 @@ int MEMPHY_dump(struct memphy_struct *mp)
   /*TODO dump memphy contnt mp->storage
    *     for tracing the memory content
    */
-
+  printf("----MEMPHY DUMPING----\n");
     if (mp == NULL || mp->storage == NULL) {
         return -1;
     }
@@ -172,11 +172,11 @@ int MEMPHY_dump(struct memphy_struct *mp)
 
     for (int i = 0; i < mp->maxsz; i++) {
         if (MEMPHY_read(mp, i, &value) == 0) {
-            printf("%d: %c", i, value);
+            printf("%d: %c\n", i, value);
         }
-        else printf("%d: Error loading content", i);
+        else printf("%d: Error loading content\n", i);
     }
-
+    printf("---DUMP END---\n");
    return 0;
 }
 

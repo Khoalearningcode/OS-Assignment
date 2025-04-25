@@ -24,7 +24,7 @@ struct pcb_t *dequeue(struct queue_t *q)
         /* TODO: return a pcb whose prioprity is the highest
          * in the queue [q] and remember to remove it from q
          * */
-        if (q->size == 0)
+        if (empty(q))
                 return NULL;
         struct pcb_t *proc = (struct pcb_t *)malloc(sizeof(struct pcb_t));
         proc = q->proc[0];
