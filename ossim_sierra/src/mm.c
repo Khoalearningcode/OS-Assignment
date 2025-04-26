@@ -100,20 +100,12 @@ int vmap_page_range(struct pcb_t *caller,           // process call
   ret_rg->rg_start = addr;
   ret_rg->rg_end = addr + pgnum * PAGING_PAGESZ;
   
-  for(int pgit = 0; pgit < pgnum; pgit++){
-    if(fpit == NULL){
-      return -1;
-    }
-
-    int pgn = pgn_start + pgit;
-    uint32_t *pte = &caller->mm->pgd[pgn + pgit];
-
-    pte_set_fpn(pte, fpit->fpn);
-
-    enlist_pgn_node(&caller->mm->fifo_pgn, pgn + pgit);
-
+  while (pgit < pgnum && fpit != NULL) {
+    pte_set_fpn(&caller->mm->pgd[pgn_start + pgit], fpit->fpn);
+    enlist_pgn_node(&caller->mm->fifo_pgn, pgn_start + pgit);
     fpit = fpit->fp_next;
-  }
+    pgit++;
+}
 
   /* TODO map range of frame to address space
    *      [addr to addr + pgnum*PAGING_PAGESZ
@@ -151,23 +143,37 @@ int alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_struc
     if (MEMPHY_get_freefp(caller->mram, &fpn) == 0)
     {
       newfp_str = malloc(sizeof(struct framephy_struct));
-      if (newfp_str == NULL)
-      {
-        return -1;
-      }
-      newfp_str->fpn = fpn;
-      newfp_str->fp_next = *frm_lst;
-      newfp_str->owner = caller->mm;
-      *frm_lst = newfp_str;
+        if (!newfp_str)
+          return -1;
+        newfp_str->fpn = fpn;
+        newfp_str->fp_next = *frm_lst;
+        newfp_str->owner = caller->mm;
+        *frm_lst = newfp_str;
     }
     else
     { // TODO: ERROR CODE of obtaining somes but not enough frames
-      ret_value = -3000; // out of memory
-      break;
+      int victim_pgn, victim_fpn, swap_fpn;
+        if (find_victim_page(caller->mm, &victim_pgn) == -1)
+          return -3000;
+        victim_fpn = PAGING_PTE_PFN(caller->mm->pgd[victim_pgn]);
+        if (MEMPHY_get_freefp(caller->active_mswp, &swap_fpn) == 0)
+          return -3000;
+        __swap_cp_page(caller->mram, victim_fpn,
+        caller->active_mswp, swap_fpn);
+        PTE_set_swap(&caller->mm->pgd[victim_pgn], 0, swap_fpn);
+        if (MEMPHY_get_freefp(caller->mram, &fpn) != 0)
+            return -3000;
+        newfp_str = malloc(sizeof(struct framephy_struct));
+        if (!newfp_str)
+            return -1;
+        newfp_str->fpn = fpn;
+        newfp_str->fp_next = *frm_lst;
+        newfp_str->owner = caller->mm;
+        *frm_lst = newfp_str;
     }
   }
 
-  return ret_value;
+  return 0;
 }
 
 /*

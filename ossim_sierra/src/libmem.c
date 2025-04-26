@@ -140,7 +140,7 @@ int __free(struct pcb_t *caller, int vmaid, int rgid)
 {
   struct vm_rg_struct rgnode;
 
-  struct vm_area_struct *cur_vma = get_vma_by_num(caller->mm, vmaid);
+  //struct vm_area_struct *cur_vma = get_vma_by_num(caller->mm, vmaid);
 
   // Dummy initialization for avoding compiler dummay warning
   // in incompleted TODO code rgnode will overwrite through implementing
@@ -151,16 +151,13 @@ int __free(struct pcb_t *caller, int vmaid, int rgid)
 
   /* TODO: Manage the collect freed region to freerg_list */
 
-  struct vm_rg_struct *currg = get_symrg_byid(cur_vma->vm_mm, rgid);
-  if(currg == NULL) {
-    printf("Invalid region ID\n");
-    return -1;
-  }
+  rgnode = caller->mm->symrgtbl[rgid];
+  caller->mm->symrgtbl[rgid].rg_start = 0;
+  caller->mm->symrgtbl[rgid].rg_end = 0;
 
-  rgnode = *currg;
 
   /*enlist the obsoleted memory region */
-  enlist_vm_freerg_list(cur_vma->vm_mm, &rgnode);
+  enlist_vm_freerg_list(caller->mm, &rgnode);
 
   return 0;
 }
@@ -477,11 +474,27 @@ int find_victim_page(struct mm_struct *mm, int *retpgn)
   struct pgn_t *pg = mm->fifo_pgn;
 
   /* TODO: Implement the theorical mechanism to find the victim page */
+  struct pgn_t * prev = NULL ;
+  if (!pg)
+    return -1;
 
-  retpgn = &pg[0].pgn;
+  while (pg->pg_next != NULL) 
+  {
+    prev = pg;
+    pg = pg->pg_next;
+  }
+
+  *retpgn = pg->pgn;
+
+  if (prev) {
+    prev->pg_next = NULL;
+  } 
+  else 
+  {
+    mm->fifo_pgn = NULL;
+  }
 
   free(pg);
-
   return 0;
 }
 
