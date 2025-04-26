@@ -54,10 +54,28 @@ int __sys_killall(struct pcb_t *caller, struct sc_regs* regs)
     /* TODO: Traverse proclist to terminate the proc
      *       stcmp to check the process match proc_name
      */
-     
 
-    //caller->running_list
-    //caller->mlq_ready_queu
+    struct queue_t *running_queue = caller->running_list;
+
+    for(int j = 0; j < running_queue->size; j++)
+    {
+        // get current process name in queue
+        char cur_proc_name[100];
+        sprintf(cur_proc_name, "P%d", running_queue->proc[j]->pid);
+
+        if(strcmp(cur_proc_name, proc_name) == 0)
+        {
+            printf("Found running process %s with pid %d\n", cur_proc_name, running_queue->proc[j]->pid);
+            libfree(running_queue->proc[j], memrg);
+        }
+        
+        for(int k = j; k < running_queue->size - 1; k++)
+        {
+            running_queue->proc[k] = running_queue->proc[k + 1];
+        }
+        running_queue->size--;
+        j--;
+    }
 
     /* TODO Maching and terminating 
      *       all processes with given
@@ -99,6 +117,8 @@ int __sys_killall(struct pcb_t *caller, struct sc_regs* regs)
                 queue->size--;
                 j--;
             }
+            mlq_queue->size--;
+            j--;
         }
     }
 #else
@@ -120,7 +140,5 @@ int __sys_killall(struct pcb_t *caller, struct sc_regs* regs)
     }
 #endif
     
-
     return 0;
-    
 }

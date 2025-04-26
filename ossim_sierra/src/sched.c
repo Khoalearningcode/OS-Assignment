@@ -67,6 +67,8 @@ struct pcb_t *get_mlq_proc(void)
 			return proc;
 		}
 	}
+
+
 	printf("%d %d\n", ready_queue.size, run_queue.size);
 	if(!queue_empty()) {
 		for(int i = 0; i < MAX_PRIO; i++) {
