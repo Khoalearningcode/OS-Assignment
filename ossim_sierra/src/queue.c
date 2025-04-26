@@ -30,7 +30,7 @@ struct pcb_t *dequeue(struct queue_t *q)
         proc = q->proc[0];
         if(q->size==1)
         {
-                q->proc[0]==NULL;
+                q->proc[0]=NULL;
         }
         else
         {

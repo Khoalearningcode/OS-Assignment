@@ -13,6 +13,23 @@
 #include "stdio.h"
 #include "libmem.h"
 #include "queue.h"
+#include <string.h>
+
+
+void get_proc_name(struct pcb_t * caller, char * name)
+{
+    char buffer[33];
+    sprintf(buffer, "%d", caller->pid);
+    name[0] = 'P';
+    int i = 0;
+    while (buffer[i] != '\0')
+    {
+        name[i+1] = buffer[i];
+        i++;
+    }
+    name[i] = '\0';
+}
+
 
 int __sys_killall(struct pcb_t *caller, struct sc_regs* regs)
 {
@@ -71,7 +88,7 @@ int __sys_killall(struct pcb_t *caller, struct sc_regs* regs)
         for (int j = 0; j < queue->size; j++) 
         {
             char name[100];
-            get_name(queue->proc[j], name);
+            get_proc_name(queue->proc[j], name);
             if (strcmp(name, proc_name) == 0) 
             {
                 libfree(queue->proc[j], memrg);
@@ -89,7 +106,7 @@ int __sys_killall(struct pcb_t *caller, struct sc_regs* regs)
     for (int j = 0; j < ready_queue->size; j++) 
     {
         char name[100];
-        get_name(ready_queue->proc[j], name);
+        get_proc_name(ready_queue->proc[j], name);
         if (strcmp(name, proc_name) == 0) 
         { 
             libfree(ready_queue->proc[j], memrg);
