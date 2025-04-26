@@ -12,6 +12,7 @@
 #include "syscall.h"
 #include "stdio.h"
 #include "libmem.h"
+#include "queue.h"
 
 int __sys_killall(struct pcb_t *caller, struct sc_regs* regs)
 {
@@ -45,57 +46,63 @@ int __sys_killall(struct pcb_t *caller, struct sc_regs* regs)
      *       all processes with given
      *        name in var proc_name
      */
-    struct queue_t *queue = caller->mlq_ready_queue;
-    struct queue_t temp_queue;
-    temp_queue.size = 0;
-    for (int i = 0; i < MAX_QUEUE_SIZE; i++) 
+    struct queue_t* run_queue = caller->running_list;
+    for (int j = 0; j < run_queue->size; j++)
     {
-        temp_queue.proc[i] = NULL;  
-    }
-    if (queue != NULL) 
-    {
-        struct pcb_t *proc;
-        while(!empty(queue))
+        char name[100];
+        get_proc_name(run_queue->proc[j], name);
+        if (strcmp(name, proc_name) == 0) 
         {
-            proc = dequeue(queue);
-            if (strcmp(proc->path, proc_name) == 0) 
+            libfree(run_queue->proc[j], memrg);
+            for (int k = j; k < run_queue->size - 1; k++)
             {
-                libfree(proc, memrg);
-            } 
-            else 
-            {
-                enqueue(&temp_queue, proc);
+                run_queue->proc[k] = run_queue->proc[k + 1];
             }
+            run_queue->size--;
+            j--;
         }
-    }
-    while (!empty(&temp_queue)) 
-    {
-        struct pcb_t *proc = dequeue(&temp_queue);
-        enqueue(queue, proc);
     }
 
-    struct queue_t *rqueue = caller->running_list;
-    if (rqueue != NULL) 
+#ifdef MLQ_SCHED
+    struct queue_t * ready_queue = caller->mlq_ready_queue;
+    for (int prio = 0; prio < MAX_PRIO; prio++)
     {
-        struct pcb_t *proc;
-        while(!empty(rqueue))
+        struct queue_t * queue = &ready_queue[prio];
+        for (int j = 0; j < queue->size; j++) 
         {
-            proc = dequeue(rqueue);
-            if (strcmp(proc->path, proc_name) == 0) 
+            char name[100];
+            get_name(queue->proc[j], name);
+            if (strcmp(name, proc_name) == 0) 
             {
-                libfree(proc, memrg);
-            } 
-            else 
-            {
-                enqueue(&temp_queue, proc);
+                libfree(queue->proc[j], memrg);
+                for (int k = j; k < queue->size - 1; k++) 
+                {
+                    queue->proc[k] = queue->proc[k + 1];
+                }
+                queue->size--;
+                j--;
             }
         }
     }
-    while (!empty(&temp_queue)) 
+#else
+    struct queue_t * ready_queue = caller->ready_queue;
+    for (int j = 0; j < ready_queue->size; j++) 
     {
-        struct pcb_t *proc = dequeue(&temp_queue);
-        enqueue(rqueue, proc);
+        char name[100];
+        get_name(ready_queue->proc[j], name);
+        if (strcmp(name, proc_name) == 0) 
+        { 
+            libfree(ready_queue->proc[j], memrg);
+            for (int k = j; k < ready_queue->size - 1; k++) 
+            {
+                ready_queue->proc[k] = ready_queue->proc[k + 1];
+            }
+            ready_queue->size--;
+            j--;
+        }
     }
+#endif
+    
 
     return 0;
     
