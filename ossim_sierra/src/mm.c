@@ -89,7 +89,7 @@ int vmap_page_range(struct pcb_t *caller,           // process call
   struct framephy_struct *fpit = frames;
   int pgit = 0;
   int pgn_start = PAGING_PGN(addr);
-  int pgn_end = pgn_start + pgnum;
+  //int pgn_end = pgn_start + pgnum;
 
   /* TODO: update the rg_end and rg_start of ret_rg 
   //ret_rg->rg_end =  ....
@@ -100,17 +100,17 @@ int vmap_page_range(struct pcb_t *caller,           // process call
   ret_rg->rg_start = addr;
   ret_rg->rg_end = addr + pgnum * PAGING_PAGESZ;
   
-  for(int pgit = 0; pgit < pgnum; pgit++){
+  for(pgit = 0; pgit < pgnum; pgit++){
     if(fpit == NULL){
       return -1;
     }
 
     int pgn = pgn_start + pgit;
-    uint32_t *pte = &caller->mm->pgd[pgn + pgit];
+    uint32_t *pte = &caller->mm->pgd[pgn];
 
     pte_set_fpn(pte, fpit->fpn);
 
-    enlist_pgn_node(&caller->mm->fifo_pgn, pgn + pgit);
+    enlist_pgn_node(&caller->mm->fifo_pgn, pgn);
 
     fpit = fpit->fp_next;
   }
