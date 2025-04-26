@@ -17,7 +17,6 @@ static int slot[MAX_PRIO];
 
 int queue_empty(void)
 {
-	printf("queue_empty\n");
 #ifdef MLQ_SCHED
 	unsigned long prio;
 	for (prio = 0; prio < MAX_PRIO; prio++)
@@ -29,7 +28,6 @@ int queue_empty(void)
 
 void init_scheduler(void)
 {
-	printf("init_scheduler\n");
 #ifdef MLQ_SCHED
 	int i;
 
@@ -53,9 +51,8 @@ void init_scheduler(void)
  */
 struct pcb_t *get_mlq_proc(void)
 {
-	printf("get_mlq_proc\n");
 	struct pcb_t *proc = NULL;
-	unsigned long prio;
+	int prio;
 	/*TODO: get a process from PRIORITY [ready_queue].
 	 * Remember to use lock to protect the queue.
 	 * */
@@ -68,10 +65,10 @@ struct pcb_t *get_mlq_proc(void)
 			proc = dequeue(&mlq_ready_queue[prio]);
 			pthread_mutex_unlock(&queue_lock);
 			slot[prio]--;
-			break;
+			return proc;
 		}
 	}
-
+	//printf("%d %d\n", ready_queue.size, run_queue.size);
 	if(!queue_empty()) {
 		for(int i = 0; i < MAX_PRIO; i++) {
 			slot[i] = MAX_PRIO - i;
@@ -86,17 +83,15 @@ struct pcb_t *get_mlq_proc(void)
 				proc = dequeue(&mlq_ready_queue[prio]);
 				pthread_mutex_unlock(&queue_lock);
 				slot[prio]--;
-				break;
+				return proc;
 			}
 		}
 	}
-
-	return proc;
+	return NULL;
 }
 
 void put_mlq_proc(struct pcb_t *proc)
 {
-	printf("put_mlq_proc\n");
 	pthread_mutex_lock(&queue_lock);
 	enqueue(&mlq_ready_queue[proc->prio], proc);
 	pthread_mutex_unlock(&queue_lock);
@@ -104,7 +99,6 @@ void put_mlq_proc(struct pcb_t *proc)
 
 void add_mlq_proc(struct pcb_t *proc)
 {
-	printf("add_mlq_proc\n");
 	pthread_mutex_lock(&queue_lock);
 	enqueue(&mlq_ready_queue[proc->prio], proc);
 	pthread_mutex_unlock(&queue_lock);
@@ -112,13 +106,11 @@ void add_mlq_proc(struct pcb_t *proc)
 
 struct pcb_t *get_proc(void)
 {
-	printf("get_proc\n");
 	return get_mlq_proc();
 }
 
 void put_proc(struct pcb_t *proc)
 {
-	printf("put_proc\n");
 	proc->ready_queue = &ready_queue;
 	proc->mlq_ready_queue = mlq_ready_queue;
 	proc->running_list = &running_list;
@@ -130,7 +122,6 @@ void put_proc(struct pcb_t *proc)
 
 void add_proc(struct pcb_t *proc)
 {
-	printf("add_proc\n");
 	proc->ready_queue = &ready_queue;
 	proc->mlq_ready_queue = mlq_ready_queue;
 	proc->running_list = &running_list;
@@ -169,6 +160,6 @@ void add_proc(struct pcb_t *proc)
 
 	/* TODO: put running proc to running_list */
 
-	return put_mlq_proc(proc);
+	return add_mlq_proc(proc);
 }
 #endif

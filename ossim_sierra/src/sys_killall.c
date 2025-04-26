@@ -12,6 +12,8 @@
 #include "syscall.h"
 #include "stdio.h"
 #include "libmem.h"
+#include "queue.h"
+#include "string.h"
 
 int __sys_killall(struct pcb_t *caller, struct sc_regs* regs)
 {
@@ -36,67 +38,79 @@ int __sys_killall(struct pcb_t *caller, struct sc_regs* regs)
     /* TODO: Traverse proclist to terminate the proc
      *       stcmp to check the process match proc_name
      */
-     
 
-    //caller->running_list
-    //caller->mlq_ready_queu
+    struct queue_t *running_queue = caller->running_list;
+
+    for(int j = 0; j < running_queue->size; j++)
+    {
+        // get current process name in queue
+        char cur_proc_name[100];
+        sprintf(cur_proc_name, "P%d", running_queue->proc[j]->pid);
+
+        if(strcmp(cur_proc_name, proc_name) == 0)
+        {
+            printf("Found running process %s with pid %d\n", cur_proc_name, running_queue->proc[j]->pid);
+            libfree(running_queue->proc[j], memrg);
+        }
+        
+        for(int k = j; k < running_queue->size - 1; k++)
+        {
+            running_queue->proc[k] = running_queue->proc[k + 1];
+        }
+        running_queue->size--;
+        j--;
+    }
 
     /* TODO Maching and terminating 
      *       all processes with given
      *        name in var proc_name
      */
-    struct queue_t *queue = caller->mlq_ready_queue;
-    struct queue_t temp_queue;
-    temp_queue.size = 0;
-    for (int i = 0; i < MAX_QUEUE_SIZE; i++) 
+    struct queue_t *ready_queue = caller->ready_queue;
+    for (int j = 0; j < ready_queue->size; j++)
     {
-        temp_queue.proc[i] = NULL;  
-    }
-    if (queue != NULL) 
-    {
-        struct pcb_t *proc;
-        while(!empty(queue))
+        // get current process name in queue
+        char cur_proc_name[100];
+        sprintf(cur_proc_name, "P%d", ready_queue->proc[j]->pid);
+
+        if (strcmp(cur_proc_name, proc_name) == 0)
         {
-            proc = dequeue(queue);
-            if (strcmp(proc->path, proc_name) == 0) 
-            {
-                libfree(proc, memrg);
-            } 
-            else 
-            {
-                enqueue(&temp_queue, proc);
-            }
+            printf("Found ready process %s with pid %d\n", cur_proc_name, ready_queue->proc[j]->pid);
+            libfree(ready_queue->proc[j], memrg);
         }
-    }
-    while (!empty(&temp_queue)) 
-    {
-        struct pcb_t *proc = dequeue(&temp_queue);
-        enqueue(queue, proc);
+
+        for (int k = j; k < ready_queue->size - 1; k++)
+        {
+            ready_queue->proc[k] = ready_queue->proc[k + 1];
+        }
+        ready_queue->size--;
+        j--;
     }
 
-    struct queue_t *rqueue = caller->running_list;
-    if (rqueue != NULL) 
-    {
-        struct pcb_t *proc;
-        while(!empty(rqueue))
+    #ifdef MLQ_SCHED
+    struct queue_t *mlq_queue = caller->mlq_ready_queue;
+
+    for(int prio = 0; prio < MAX_PRIO; prio++) {
+        for (int j = 0; j < mlq_queue->size; j++)
         {
-            proc = dequeue(rqueue);
-            if (strcmp(proc->path, proc_name) == 0) 
+            // get current process name in queue
+            char cur_proc_name[100];
+            sprintf(cur_proc_name, "P%d", mlq_queue->proc[j]->pid);
+
+            if (strcmp(cur_proc_name, proc_name) == 0)
             {
-                libfree(proc, memrg);
-            } 
-            else 
-            {
-                enqueue(&temp_queue, proc);
+                printf("Found MLQ process %s with pid %d\n", cur_proc_name, mlq_queue->proc[j]->pid);
+                libfree(mlq_queue->proc[j], memrg);
             }
+
+            for (int k = j; k < mlq_queue->size - 1; k++)
+            {
+                mlq_queue->proc[k] = mlq_queue->proc[k + 1];
+            }
+            mlq_queue->size--;
+            j--;
         }
     }
-    while (!empty(&temp_queue)) 
-    {
-        struct pcb_t *proc = dequeue(&temp_queue);
-        enqueue(rqueue, proc);
-    }
+    #endif
 
     return 0;
-    
 }
