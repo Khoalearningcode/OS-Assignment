@@ -117,7 +117,7 @@ int __sys_killall(struct pcb_t *caller, struct sc_regs* regs)
                 queue->size--;
                 j--;
             }
-            mlq_queue->size--;
+            ready_queue->size--;
             j--;
         }
     }

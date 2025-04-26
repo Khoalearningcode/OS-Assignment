@@ -9,7 +9,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-
 static int time_slot;
 static int num_cpus;
 static int done = 0;
@@ -17,7 +16,7 @@ static int done = 0;
 #ifdef MM_PAGING
 static int memramsz;
 static int memswpsz[PAGING_MAX_MMSWP];
-#define MM_FIXED_MEMSZ
+
 
 struct mmpaging_ld_args {
 	/* A dispatched argument struct to compact many-fields passing to loader */

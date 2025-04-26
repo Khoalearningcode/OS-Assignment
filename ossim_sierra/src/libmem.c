@@ -510,28 +510,40 @@ int get_free_vmrg_area(struct pcb_t *caller, int vmaid, int size, struct vm_rg_s
 
   struct vm_rg_struct *rgit = cur_vma->vm_freerg_list;
 
+  struct vm_rg_struct *prev = NULL;
+
   if (rgit == NULL)
     return -1;
 
   /* Probe unintialized newrg */
   newrg->rg_start = newrg->rg_end = -1;
+  newrg->rg_next = NULL;
 
   /* TODO Traverse on list of free vm region to find a fit space */
-  struct vm_rg_struct *rgnext = rgit;
+  while (rgit != NULL) {
+    int available = rgit->rg_end - rgit->rg_start;
+    if (available >= size) {
+      newrg->rg_start = rgit->rg_start;
+      newrg->rg_end = rgit->rg_start + size;
 
-  while (rgnext->rg_end - rgnext->rg_start < size) {
-    rgit = rgnext;
-    rgnext = rgnext->rg_next;
+      if (available == size) {
+        if (prev == NULL)
+          cur_vma->vm_freerg_list = rgit->rg_next;
+        else
+          prev->rg_next = rgit->rg_next;
+        
+        free(rgit);
+      }
+      else {
+        rgit->rg_start += size;
+      }
+      return 0;
+    }
+    prev = rgit;
+    rgit = rgit->rg_next;
   }
 
-  rgit->rg_next = NULL;
-
-  newrg->rg_start = rgnext->rg_start;
-  newrg->rg_end = rgnext->rg_end;
-
-  free(rgnext);
-
-  return 0;
+  return -1;
 }
 
 //#endif

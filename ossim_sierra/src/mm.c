@@ -155,12 +155,12 @@ int alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_struc
       int victim_pgn, victim_fpn, swap_fpn;
         if (find_victim_page(caller->mm, &victim_pgn) == -1)
           return -3000;
-        victim_fpn = PAGING_PTE_PFN(caller->mm->pgd[victim_pgn]);
+        victim_fpn = PAGING_PTE_FPN(caller->mm->pgd[victim_pgn]);
         if (MEMPHY_get_freefp(caller->active_mswp, &swap_fpn) == 0)
           return -3000;
         __swap_cp_page(caller->mram, victim_fpn,
         caller->active_mswp, swap_fpn);
-        PTE_set_swap(&caller->mm->pgd[victim_pgn], 0, swap_fpn);
+        pte_set_swap(&caller->mm->pgd[victim_pgn], 0, swap_fpn);
         if (MEMPHY_get_freefp(caller->mram, &fpn) != 0)
             return -3000;
         newfp_str = malloc(sizeof(struct framephy_struct));
