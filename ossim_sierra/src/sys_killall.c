@@ -99,10 +99,10 @@ int __sys_killall(struct pcb_t *caller, struct sc_regs* regs)
     }
 
 #ifdef MLQ_SCHED
-    struct queue_t * ready_queue = caller->mlq_ready_queue;
+    struct queue_t * mlq_queue = caller->mlq_ready_queue;
     for (int prio = 0; prio < MAX_PRIO; prio++)
     {
-        struct queue_t * queue = &ready_queue[prio];
+        struct queue_t * queue = &mlq_queue[prio];
         for (int j = 0; j < queue->size; j++) 
         {
             char name[100];
