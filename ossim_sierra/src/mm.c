@@ -88,7 +88,6 @@ int vmap_page_range(struct pcb_t *caller,           // process call
 {                                                   // no guarantee all given pages are mapped
   struct framephy_struct *fpit = frames;
   int pgit = 0;
-  int pgn_start = PAGING_PGN(addr);
   //int pgn_end = pgn_start + pgnum;
   int pgn = PAGING_PGN (addr);
 
@@ -99,10 +98,6 @@ int vmap_page_range(struct pcb_t *caller,           // process call
   */
 
   ret_rg->rg_start = addr;
-  ret_rg->rg_end = addr + pgnum * PAGING_PAGESZ;
-  
-  
-
 
   /* TODO map range of frame to address space
    *      [addr to addr + pgnum*PAGING_PAGESZ
@@ -110,11 +105,27 @@ int vmap_page_range(struct pcb_t *caller,           // process call
    */
   while (pgit < pgnum && fpit != NULL) 
   {
-    pte_set_fpn(&caller->mm->pgd[pgn + pgit], fpit->fpn);
-    enlist_pgn_node(&caller->mm->fifo_pgn, pgn + pgit);
+    uint32_t *pte = &caller->mm->pgd[pgn];
+    pte_set_fpn(pte, fpit->fpn);
+    enlist_pgn_node(&caller->mm->fifo_pgn, pgn);
     fpit = fpit->fp_next;
+    pgn++;
     pgit++;
   }
+
+  // get pages from SWAP if not enough
+  while(pgit < pgnum) {
+    int swap_fpn;
+    uint32_t *pte = &caller->mm->pgd[pgn];
+
+    MEMPHY_get_freefp(caller->active_mswp, &swap_fpn);
+    pte_set_swap(pte, 0, swap_fpn);
+
+    pgn++;
+    pgit++;
+  }
+
+  ret_rg->rg_end = addr + pgnum * PAGING_PAGESZ;
   /* Tracking for later page replacement activities (if needed)
    * Enqueue new usage page */
 
@@ -139,6 +150,7 @@ int alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_struc
   //frm_lst-> ...
   */
 
+
   for (pgit = 0; pgit < req_pgnum; pgit++)
   {
   /* TODO: allocate the page 
@@ -158,11 +170,11 @@ int alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_struc
     else
     { // TODO: ERROR CODE of obtaining somes but not enough frames
       int victim_pgn, victim_fpn, swap_fpn;
-      if (find_victim_page(caller->mm, &victim_pgn) == -1) {
+      if (find_victim_page(caller->mm, &victim_pgn) != 0) {
           return -3000;
       }
       victim_fpn = PAGING_PTE_FPN(caller->mm->pgd[victim_pgn]);
-      if (MEMPHY_get_freefp(caller->active_mswp, &swap_fpn) == 0) {
+      if (MEMPHY_get_freefp(caller->active_mswp, &swap_fpn) != 0) {
           return -3000;
       }
       __swap_cp_page(caller->mram, victim_fpn, caller->active_mswp, swap_fpn);
