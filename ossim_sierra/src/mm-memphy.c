@@ -163,6 +163,7 @@ int MEMPHY_dump(struct memphy_struct *mp)
   /*TODO dump memphy contnt mp->storage
    *     for tracing the memory content
    */
+   #ifdef IODUMP
   printf("----MEMPHY DUMPING----\n");
     if (mp == NULL || mp->storage == NULL) {
         return -1;
@@ -177,6 +178,7 @@ int MEMPHY_dump(struct memphy_struct *mp)
         else printf("%d: Error loading content\n", i);
     }
     printf("---DUMP END---\n");
+    #endif
    return 0;
 }
 
