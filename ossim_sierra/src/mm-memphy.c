@@ -163,7 +163,6 @@ int MEMPHY_dump(struct memphy_struct *mp)
   /*TODO dump memphy contnt mp->storage
    *     for tracing the memory content
    */
-  #ifdef IODUMP
   if(mp == NULL || mp->storage == NULL) {
    return -1;
   }
@@ -176,7 +175,6 @@ int MEMPHY_dump(struct memphy_struct *mp)
   }
   printf("===== PHYSICAL MEMORY END-DUMP =====\n");
   printf("================================================================\n");
-  #endif
    return 0;
 }
 
