@@ -83,7 +83,6 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, int size, int *alloc_addr
     *alloc_addr = rgnode.rg_start;
 
     pthread_mutex_unlock(&mmvm_lock);
-    printf("%s\n", "success");
     return 0;
   }
 
@@ -94,15 +93,16 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, int size, int *alloc_addr
   struct vm_area_struct *cur_vma = get_vma_by_num(caller->mm, vmaid);
   if (!cur_vma) {
     pthread_mutex_unlock(&mmvm_lock);
-    printf("%s\n", "fail");
     return -1;
   }
   
   int inc_sz = PAGING_PAGE_ALIGNSZ(size);
   //int inc_limit_ret;
-
+  int inc_limit_ret = inc_vma_limit(caller,vmaid, size);
+  struct vm_rg_struct *newrg = malloc(sizeof(struct vm_rg_struct));
+  
   /* TODO retrive old_sbrk if needed, current comment out due to compiler redundant warning*/
-  int old_sbrk = cur_vma->sbrk;
+  //int old_sbrk = cur_vma->sbrk;
 
   /* TODO INCREASE THE LIMIT as inovking systemcall 
    * sys_memap with SYSMEM_INC_OP 
@@ -121,15 +121,21 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, int size, int *alloc_addr
   if (syscall_ret < 0)
       return -1;
   /* TODO: commit the limit increment */
-  
+  cur_vma = get_vma_by_num(caller->mm, vmaid);
+  newrg->rg_start = cur_vma->vm_start;
+  newrg->rg_end = cur_vma->rg_end= cur_vma->sbrk;
+  newrg->rg_next = NULL;
+  cur_vma = get_vma_by_num(caller->mm, vmaid);
+  if(enlist_vm_freerg_list(caller->mm, newrg) != 0)
+  {
+    pthread_mutex_unlock(&mmvm_lock);
+    return -1;
+  }
   /* TODO: commit the allocation address */
-
-  cur_vma->sbrk = old_sbrk + inc_sz;
 
   if(get_free_vmrg_area(caller, vmaid, size, &rgnode) != 0)
   {
     pthread_mutex_unlock(&mmvm_lock);
-    printf("%s\n", "fail");
     return -1;
   }
 
@@ -395,6 +401,8 @@ int pg_setval(struct mm_struct *mm, int addr, BYTE value, struct pcb_t *caller)
    *  SYSCALL 17 sys_memmap with SYSMEM_IO_WRITE
    */
   int phyaddr = fpn * PAGE_SIZE + off;
+  printf("Value to write: %d\n", value);
+  printf("Pphysical address: %d\n", phyaddr);
   if(phyaddr < 0 || phyaddr >= caller->mram->maxsz) {
     printf("Invalid physical address: %d\n", phyaddr);
     return -1;
@@ -431,7 +439,6 @@ int __read(struct pcb_t *caller, int vmaid, int rgid, int offset, BYTE *data)
   if (currg == NULL || cur_vma == NULL) /* Invalid memory identify */
   {
     pthread_mutex_unlock(&mmvm_lock);
-    printf("%s\n", "fail");
     return -1;
   }
 
@@ -484,12 +491,10 @@ int __write(struct pcb_t *caller, int vmaid, int rgid, int offset, BYTE value)
   if (currg == NULL || cur_vma == NULL) /* Invalid memory identify */
   {
     pthread_mutex_lock(&mmvm_lock);
-    printf("%s\n", "fail");
     return -1;
   }
   pg_setval(caller->mm, currg->rg_start + offset, value, caller);
   pthread_mutex_unlock(&mmvm_lock);
-  printf("%s\n", "success");
   return 0;
 }
 
@@ -547,16 +552,17 @@ int free_pcb_memph(struct pcb_t *caller)
  */
 int find_victim_page(struct mm_struct *mm, int *retpgn)
 {
-  struct pgn_t *pg = mm->fifo_pgn;
-  struct pgn_t *prev = NULL;
+  // struct pgn_t *pg = mm->fifo_pgn;
+  // struct pgn_t *prev = NULL;
   /* TODO: Implement the theorical mechanism to find the victim page */
-  if (!pg) return -1;
+  // if (!pg) return -1;
 
-  *retpgn = pg->pgn;
-  mm->fifo_pgn = pg->pg_next;
+  // *retpgn = pg->pgn;
+  // mm->fifo_pgn = pg->pg_next;
 
-  free(pg);
-  return 0;
+  // free(pg);
+  // return 0;
+
 }
 
 /*get_free_vmrg_area - get a free vm region
@@ -568,15 +574,15 @@ int find_victim_page(struct mm_struct *mm, int *retpgn)
 int get_free_vmrg_area(struct pcb_t *caller, int vmaid, int size, struct vm_rg_struct *newrg)
 {
   struct vm_area_struct *cur_vma = get_vma_by_num(caller->mm, vmaid);
-
   struct vm_rg_struct *rgit = cur_vma->vm_freerg_list;
+
 
   struct vm_rg_struct *prev = NULL;
 
   if (rgit == NULL || cur_vma == NULL || size <= 0)
   {
     return -1;
-
+  }
     /* Probe unintialized newrg */
     newrg->rg_start = newrg->rg_end = -1;
     newrg->rg_next = NULL;
@@ -585,7 +591,6 @@ int get_free_vmrg_area(struct pcb_t *caller, int vmaid, int size, struct vm_rg_s
     while (rgit != NULL)
     {
       int available = rgit->rg_end - rgit->rg_start;
-
       if (available >= size)
       {
         newrg->rg_start = rgit->rg_start;
@@ -611,7 +616,7 @@ int get_free_vmrg_area(struct pcb_t *caller, int vmaid, int size, struct vm_rg_s
     }
 
     return -1;
-  }
+  
 }
 
   // #endif
