@@ -100,7 +100,6 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, int size, int *alloc_addr
   
   int inc_sz = PAGING_PAGE_ALIGNSZ(size);
   //int inc_limit_ret;
-  int inc_limit_ret = inc_vma_limit(caller,vmaid, size);
   struct vm_rg_struct *newrg = malloc(sizeof(struct vm_rg_struct));
   
   /* TODO retrive old_sbrk if needed, current comment out due to compiler redundant warning*/
@@ -124,7 +123,7 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, int size, int *alloc_addr
   /* TODO: commit the limit increment */
   cur_vma = get_vma_by_num(caller->mm, vmaid);
   newrg->rg_start = cur_vma->vm_start;
-  newrg->rg_end = cur_vma->rg_end= cur_vma->sbrk;
+  newrg->rg_end = cur_vma->vm_end;
   newrg->rg_next = NULL;
   cur_vma = get_vma_by_num(caller->mm, vmaid);
   if(enlist_vm_freerg_list(caller->mm, newrg) != 0)
@@ -527,7 +526,7 @@ int libwrite(
     uint32_t offset)
 {
 #ifdef IODUMP
-  ptritf("===== PHYSICAL MEMORY AFTER WRITING =====\n");
+  printf("===== PHYSICAL MEMORY AFTER WRITING =====\n");
   printf("write region=%d offset=%d value=%d\n", destination, offset, data);
 #ifdef PAGETBL_DUMP
   print_pgtbl(proc, 0, -1); //print max TBL
