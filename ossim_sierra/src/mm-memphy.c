@@ -163,22 +163,20 @@ int MEMPHY_dump(struct memphy_struct *mp)
   /*TODO dump memphy contnt mp->storage
    *     for tracing the memory content
    */
-   #ifdef IODUMP
-  printf("----MEMPHY DUMPING----\n");
-    if (mp == NULL || mp->storage == NULL) {
-        return -1;
-    }
+  #ifdef IODUMP
+  if(mp == NULL || mp->storage == NULL) {
+   return -1;
+  }
 
-    BYTE value;
-
-    for (int i = 0; i < mp->maxsz; i++) {
-        if (MEMPHY_read(mp, i, &value) == 0) {
-            printf("%d: %c\n", i, value);
-        }
-        else printf("%d: Error loading content\n", i);
-    }
-    printf("---DUMP END---\n");
-    #endif
+  printf("===== PHYSICAL MEMORY DUMP =====");
+  for(int i = 0; i < mp->maxsz; i++) {
+   if(mp->storage[i] != 0) {
+      printf("BYTE %08x: %d\n", i, mp->storage[i]);
+   }
+  }
+  printf("===== PHYSICAL MEMORY END-DUMP =====\n");
+  printf("================================================================\n");
+  #endif
    return 0;
 }
 
