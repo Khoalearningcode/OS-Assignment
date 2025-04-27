@@ -167,7 +167,7 @@ int MEMPHY_dump(struct memphy_struct *mp)
    return -1;
   }
 
-  printf("===== PHYSICAL MEMORY DUMP =====");
+  printf("===== PHYSICAL MEMORY DUMP =====\n");
   for(int i = 0; i < mp->maxsz; i++) {
    if(mp->storage[i] != 0) {
       printf("BYTE %08x: %d\n", i, mp->storage[i]);
